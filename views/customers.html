@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes - BMW Service Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="/dashboard" class="logo">🚗 BMW Service Manager</a>
+            <ul class="nav-links">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/vehicles">Vehículos</a></li>
+                <li><a href="/customers">Clientes</a></li>
+                <li><a href="/appointments">Citas</a></li>
+                <li><a href="/logout" class="btn btn-danger">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>Gestión de Clientes</h1>
+                <button class="btn btn-success" onclick="openCustomerModal()">+ Agregar Cliente</button>
+            </div>
+
+            <div id="alerts"></div>
+
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Apellido</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Dirección</th>
+                            <th>Fecha Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem;">
+                                Cargando clientes...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCustomerModal()">&times;</span>
+            <h2 id="modalTitle">Agregar Cliente</h2>
+            
+            <form id="customerForm">
+                <input type="hidden" id="customerId">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">Nombre:</label>
+                        <input type="text" id="first_name" name="first_name" class="form-control" required>
+                        <div class="error-message" id="first_name-error"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last_name">Apellido:</label>
+                        <input type="text" id="last_name" name="last_name" class="form-control" required>
+                        <div class="error-message" id="last_name-error"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                    <div class="error-message" id="email-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Teléfono:</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" required>
+                    <div class="error-message" id="phone-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Dirección:</label>
+                    <textarea id="address" name="address" class="form-control" rows="3" placeholder="Dirección completa (opcional)"></textarea>
+                    <div class="error-message" id="address-error"></div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">Guardar Cliente</button>
+                    <button type="button" class="btn" onclick="closeCustomerModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/validation.js"></script>
+    <script>
+        let customers = [];
+        let editingCustomerId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCustomers();
+            
+            document.getElementById('customerForm').addEventListener('submit', handleCustomerSubmit);
+        });
+
+        async function loadCustomers() {
+            try {
+                const response = await fetch('/api/customers');
+                customers = await response.json();
+                displayCustomers();
+            } catch (error) {
+                console.error('Error loading customers:', error);
+                showError('Error al cargar los clientes');
+            }
+        }
+
+        function displayCustomers() {
+            const tbody = document.getElementById('customersTableBody');
+            
+            if (customers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem;">
+                            No hay clientes registrados
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = customers.map(customer => `
+                <tr>
+                    <td><strong>${customer.first_name}</strong></td>
+                    <td><strong>${customer.last_name}</strong></td>
+                    <td>${customer.email}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.address || '-'}</td>
+                    <td>${formatDate(customer.created_at)}</td>
+                    <td>
+                        <button class="btn" onclick="editCustomer(${customer.id})" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openCustomerModal() {
+            editingCustomerId = null;
+            document.getElementById('modalTitle').textContent = 'Agregar Cliente';
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerId').value = '';
+            clearErrors();
+            document.getElementById('customerModal').style.display = 'block';
+        }
+
+        function closeCustomerModal() {
+            document.getElementById('customerModal').style.display = 'none';
+            clearErrors();
+        }
+
+        function editCustomer(id) {
+            const customer = customers.find(c => c.id === id);
+            if (!customer) return;
+            
+            editingCustomerId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Cliente';
+            document.getElementById('customerId').value = id;
+            
+            document.getElementById('first_name').value = customer.first_name;
+            document.getElementById('last_name').value = customer.last_name;
+            document.getElementById('email').value = customer.email;
+            document.getElementById('phone').value = customer.phone;
+            document.getElementById('address').value = customer.address || '';
+            
+            clearErrors();
+            document.getElementById('customerModal').style.display = 'block';
+        }
+
+        async function handleCustomerSubmit(e) {
+            e.preventDefault();
+            
+            if (!validateCustomerForm()) return;
+            
+            const formData = new FormData(e.target);
+            const customerData = Object.fromEntries(formData.entries());
+            
+            try {
+                const url = editingCustomerId ? `/api/customers/${editingCustomerId}` : '/api/customers';
+                const method = editingCustomerId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(customerData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(result.message);
+                    closeCustomerModal();
+                    loadCustomers();
+                } else {
+                    showError(result.error || 'Error al guardar el cliente');
+                }
+            } catch (error) {
+                console.error('Error saving customer:', error);
+                showError('Error al guardar el cliente');
+            }
+        }
+
+        function validateCustomerForm() {
+            const firstName = document.getElementById('first_name').value.trim();
+            const lastName = document.getElementById('last_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            
+            let isValid = true;
+            clearErrors();
+            
+            if (!firstName) {
+                showFieldError('first_name', 'El nombre es requerido');
+                isValid = false;
+            } else if (firstName.length < 2) {
+                showFieldError('first_name', 'El nombre debe tener al menos 2 caracteres');
+                isValid = false;
+            }
+            
+            if (!lastName) {
+                showFieldError('last_name', 'El apellido es requerido');
+                isValid = false;
+            } else if (lastName.length < 2) {
+                showFieldError('last_name', 'El apellido debe tener al menos 2 caracteres');
+                isValid = false;
+            }
+            
+            if (!email) {
+                showFieldError('email', 'El email es requerido');
+                isValid = false;
+            } else if (!isValidEmail(email)) {
+                showFieldError('email', 'El formato del email no es válido');
+                isValid = false;
+            }
+            
+            if (!phone) {
+                showFieldError('phone', 'El teléfono es requerido');
+                isValid = false;
+            } else if (!isValidPhone(phone)) {
+                showFieldError('phone', 'El formato del teléfono no es válido');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('customerModal');
+            if (event.target === modal) {
+                closeCustomerModal();
+            }
+        }
+    </script>
+</body>
+</html>

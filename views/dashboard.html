@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - BMW Service Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="/dashboard" class="logo">🚗 BMW Service Manager</a>
+            <ul class="nav-links">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/vehicles">Vehículos</a></li>
+                <li><a href="/customers">Clientes</a></li>
+                <li><a href="/appointments">Citas</a></li>
+                <li><a href="/logout" class="btn btn-danger">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <h1>Panel de Control</h1>
+            <p>Bienvenido al sistema de gestión BMW Service Manager</p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalVehicles">-</div>
+                <div class="stat-label">Vehículos Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="availableVehicles">-</div>
+                <div class="stat-label">Vehículos Disponibles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCustomers">-</div>
+                <div class="stat-label">Clientes Registrados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalAppointments">-</div>
+                <div class="stat-label">Citas Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="upcomingAppointments">-</div>
+                <div class="stat-label">Próximas Citas</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Funciones Principales</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🚙</div>
+                    <h3>Gestión de Vehículos</h3>
+                    <p>Administra el inventario completo de vehículos BMW</p>
+                    <a href="/vehicles" class="btn">Ver Vehículos</a>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">👥</div>
+                    <h3>Gestión de Clientes</h3>
+                    <p>Mantén el registro de todos tus clientes</p>
+                    <a href="/customers" class="btn">Ver Clientes</a>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📅</div>
+                    <h3>Citas de Servicio</h3>
+                    <p>Programa y gestiona citas de mantenimiento</p>
+                    <a href="/appointments" class="btn">Ver Citas</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+        });
+
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/dashboard-stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalVehicles').textContent = stats.totalVehicles || 0;
+                document.getElementById('availableVehicles').textContent = stats.availableVehicles || 0;
+                document.getElementById('totalCustomers').textContent = stats.totalCustomers || 0;
+                document.getElementById('totalAppointments').textContent = stats.totalAppointments || 0;
+                document.getElementById('upcomingAppointments').textContent = stats.upcomingAppointments || 0;
+                
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+    </script>
+</body>
+</html>

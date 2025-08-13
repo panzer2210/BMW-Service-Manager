@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehículos - BMW Service Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="/dashboard" class="logo">🚗 BMW Service Manager</a>
+            <ul class="nav-links">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/vehicles">Vehículos</a></li>
+                <li><a href="/customers">Clientes</a></li>
+                <li><a href="/appointments">Citas</a></li>
+                <li><a href="/logout" class="btn btn-danger">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>Gestión de Vehículos BMW</h1>
+                <button class="btn btn-success" onclick="openVehicleModal()">+ Agregar Vehículo</button>
+            </div>
+
+            <div id="alerts"></div>
+
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Modelo</th>
+                            <th>Año</th>
+                            <th>VIN</th>
+                            <th>Color</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th>Kilometraje</th>
+                            <th>Combustible</th>
+                            <th>Transmisión</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehiclesTableBody">
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 2rem;">
+                                Cargando vehículos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeVehicleModal()">&times;</span>
+            <h2 id="modalTitle">Agregar Vehículo BMW</h2>
+            
+            <form id="vehicleForm">
+                <input type="hidden" id="vehicleId">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="model">Modelo BMW:</label>
+                        <select id="model" name="model" class="form-control" required>
+                            <option value="">Seleccionar modelo</option>
+                            <option value="BMW 118i">BMW 118i</option>
+                            <option value="BMW 320i">BMW 320i</option>
+                            <option value="BMW 330i">BMW 330i</option>
+                            <option value="BMW 420i">BMW 420i</option>
+                            <option value="BMW 520i">BMW 520i</option>
+                            <option value="BMW X1">BMW X1</option>
+                            <option value="BMW X3">BMW X3</option>
+                            <option value="BMW X5">BMW X5</option>
+                            <option value="BMW X7">BMW X7</option>
+                            <option value="BMW Z4">BMW Z4</option>
+                            <option value="BMW i3">BMW i3</option>
+                            <option value="BMW iX3">BMW iX3</option>
+                            <option value="BMW M3">BMW M3</option>
+                            <option value="BMW M5">BMW M5</option>
+                        </select>
+                        <div class="error-message" id="model-error"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="year">Año:</label>
+                        <input type="number" id="year" name="year" class="form-control" min="1990" max="2030" required>
+                        <div class="error-message" id="year-error"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vin">VIN (17 caracteres):</label>
+                        <input type="text" id="vin" name="vin" class="form-control" maxlength="17" required>
+                        <div class="error-message" id="vin-error"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="color">Color:</label>
+                        <select id="color" name="color" class="form-control" required>
+                            <option value="">Seleccionar color</option>
+                            <option value="Alpine White">Alpine White</option>
+                            <option value="Jet Black">Jet Black</option>
+                            <option value="Mineral Grey">Mineral Grey</option>
+                            <option value="Melbourne Red">Melbourne Red</option>
+                            <option value="Carbon Black">Carbon Black</option>
+                            <option value="Storm Bay">Storm Bay</option>
+                            <option value="Midnight Black">Midnight Black</option>
+                            <option value="Glacier Silver">Glacier Silver</option>
+                        </select>
+                        <div class="error-message" id="color-error"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="price">Precio (USD):</label>
+                        <input type="number" id="price" name="price" class="form-control" min="0" step="0.01" required>
+                        <div class="error-message" id="price-error"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="status">Estado:</label>
+                        <select id="status" name="status" class="form-control" required>
+                            <option value="available">Disponible</option>
+                            <option value="sold">Vendido</option>
+                            <option value="reserved">Reservado</option>
+                            <option value="maintenance">En Mantenimiento</option>
+                        </select>
+                        <div class="error-message" id="status-error"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mileage">Kilometraje:</label>
+                        <input type="number" id="mileage" name="mileage" class="form-control" min="0" value="0">
+                        <div class="error-message" id="mileage-error"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fuel_type">Tipo de Combustible:</label>
+                        <select id="fuel_type" name="fuel_type" class="form-control" required>
+                            <option value="gasoline">Gasolina</option>
+                            <option value="diesel">Diésel</option>
+                            <option value="electric">Eléctrico</option>
+                            <option value="hybrid">Híbrido</option>
+                        </select>
+                        <div class="error-message" id="fuel_type-error"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transmission">Transmisión:</label>
+                    <select id="transmission" name="transmission" class="form-control" required>
+                        <option value="automatic">Automática</option>
+                        <option value="manual">Manual</option>
+                        <option value="cvt">CVT</option>
+                    </select>
+                    <div class="error-message" id="transmission-error"></div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">Guardar Vehículo</button>
+                    <button type="button" class="btn" onclick="closeVehicleModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/validation.js"></script>
+    <script>
+        let vehicles = [];
+        let editingVehicleId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVehicles();
+            
+            document.getElementById('vehicleForm').addEventListener('submit', handleVehicleSubmit);
+            document.getElementById('vin').addEventListener('input', function(e) {
+                e.target.value = e.target.value.replace(/[^A-HJ-NPR-Z0-9]/gi, '').toUpperCase();
+            });
+        });
+
+        async function loadVehicles() {
+            try {
+                const response = await fetch('/api/vehicles');
+                vehicles = await response.json();
+                displayVehicles();
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+                showError('Error al cargar los vehículos');
+            }
+        }
+
+        function displayVehicles() {
+            const tbody = document.getElementById('vehiclesTableBody');
+            
+            if (vehicles.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 2rem;">
+                            No hay vehículos registrados
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = vehicles.map(vehicle => `
+                <tr>
+                    <td><strong>${vehicle.model}</strong></td>
+                    <td>${vehicle.year}</td>
+                    <td><code>${vehicle.vin}</code></td>
+                    <td>${vehicle.color}</td>
+                    <td>${formatCurrency(vehicle.price)}</td>
+                    <td><span class="status-${vehicle.status}">${getStatusText(vehicle.status)}</span></td>
+                    <td>${vehicle.mileage.toLocaleString()} km</td>
+                    <td>${getFuelTypeText(vehicle.fuel_type)}</td>
+                    <td>${getTransmissionText(vehicle.transmission)}</td>
+                    <td>
+                        <button class="btn" onclick="editVehicle(${vehicle.id})" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteVehicle(${vehicle.id})" style="padding: 0.5rem 1rem;">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openVehicleModal() {
+            editingVehicleId = null;
+            document.getElementById('modalTitle').textContent = 'Agregar Vehículo BMW';
+            document.getElementById('vehicleForm').reset();
+            document.getElementById('vehicleId').value = '';
+            clearErrors();
+            document.getElementById('vehicleModal').style.display = 'block';
+        }
+
+        function closeVehicleModal() {
+            document.getElementById('vehicleModal').style.display = 'none';
+            clearErrors();
+        }
+
+        function editVehicle(id) {
+            const vehicle = vehicles.find(v => v.id === id);
+            if (!vehicle) return;
+            
+            editingVehicleId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Vehículo BMW';
+            document.getElementById('vehicleId').value = id;
+            
+            document.getElementById('model').value = vehicle.model;
+            document.getElementById('year').value = vehicle.year;
+            document.getElementById('vin').value = vehicle.vin;
+            document.getElementById('color').value = vehicle.color;
+            document.getElementById('price').value = vehicle.price;
+            document.getElementById('status').value = vehicle.status;
+            document.getElementById('mileage').value = vehicle.mileage;
+            document.getElementById('fuel_type').value = vehicle.fuel_type;
+            document.getElementById('transmission').value = vehicle.transmission;
+            
+            clearErrors();
+            document.getElementById('vehicleModal').style.display = 'block';
+        }
+
+        async function deleteVehicle(id) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este vehículo?')) return;
+            
+            try {
+                const response = await fetch(`/api/vehicles/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(result.message);
+                    loadVehicles();
+                } else {
+                    showError(result.error || 'Error al eliminar el vehículo');
+                }
+            } catch (error) {
+                console.error('Error deleting vehicle:', error);
+                showError('Error al eliminar el vehículo');
+            }
+        }
+
+        async function handleVehicleSubmit(e) {
+            e.preventDefault();
+            
+            if (!validateVehicleForm()) return;
+            
+            const formData = new FormData(e.target);
+            const vehicleData = Object.fromEntries(formData.entries());
+            
+            try {
+                const url = editingVehicleId ? `/api/vehicles/${editingVehicleId}` : '/api/vehicles';
+                const method = editingVehicleId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(vehicleData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(result.message);
+                    closeVehicleModal();
+                    loadVehicles();
+                } else {
+                    showError(result.error || 'Error al guardar el vehículo');
+                }
+            } catch (error) {
+                console.error('Error saving vehicle:', error);
+                showError('Error al guardar el vehículo');
+            }
+        }
+
+        function validateVehicleForm() {
+            const model = document.getElementById('model').value.trim();
+            const year = document.getElementById('year').value;
+            const vin = document.getElementById('vin').value.trim();
+            const color = document.getElementById('color').value.trim();
+            const price = document.getElementById('price').value;
+            const mileage = document.getElementById('mileage').value;
+            
+            let isValid = true;
+            clearErrors();
+            
+            if (!model) {
+                showFieldError('model', 'El modelo es requerido');
+                isValid = false;
+            }
+            
+            const yearError = validateYear(year);
+            if (yearError) {
+                showFieldError('year', yearError);
+                isValid = false;
+            }
+            
+            if (!vin) {
+                showFieldError('vin', 'El VIN es requerido');
+                isValid = false;
+            } else if (!isValidVIN(vin)) {
+                showFieldError('vin', 'El VIN debe tener exactamente 17 caracteres alfanuméricos válidos');
+                isValid = false;
+            }
+            
+            if (!color) {
+                showFieldError('color', 'El color es requerido');
+                isValid = false;
+            }
+            
+            const priceError = validatePrice(price);
+            if (priceError) {
+                showFieldError('price', priceError);
+                isValid = false;
+            }
+            
+            const mileageError = validateNumber(mileage, 'Kilometraje', 0);
+            if (mileageError) {
+                showFieldError('mileage', mileageError);
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'available': 'Disponible',
+                'sold': 'Vendido',
+                'reserved': 'Reservado',
+                'maintenance': 'Mantenimiento'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getFuelTypeText(fuelType) {
+            const fuelMap = {
+                'gasoline': 'Gasolina',
+                'diesel': 'Diésel',
+                'electric': 'Eléctrico',
+                'hybrid': 'Híbrido'
+            };
+            return fuelMap[fuelType] || fuelType;
+        }
+
+        function getTransmissionText(transmission) {
+            const transmissionMap = {
+                'automatic': 'Automática',
+                'manual': 'Manual',
+                'cvt': 'CVT'
+            };
+            return transmissionMap[transmission] || transmission;
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('vehicleModal');
+            if (event.target === modal) {
+                closeVehicleModal();
+            }
+        }
+    </script>
+</body>
+</html>

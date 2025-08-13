@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citas de Servicio - BMW Service Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="/dashboard" class="logo">🚗 BMW Service Manager</a>
+            <ul class="nav-links">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/vehicles">Vehículos</a></li>
+                <li><a href="/customers">Clientes</a></li>
+                <li><a href="/appointments">Citas</a></li>
+                <li><a href="/logout" class="btn btn-danger">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>Gestión de Citas de Servicio</h1>
+                <button class="btn btn-success" onclick="openAppointmentModal()">+ Agendar Cita</button>
+            </div>
+
+            <div id="alerts"></div>
+
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Vehículo</th>
+                            <th>Servicio</th>
+                            <th>Fecha/Hora</th>
+                            <th>Estado</th>
+                            <th>Notas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appointmentsTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 2rem;">
+                                Cargando citas...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="appointmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAppointmentModal()">&times;</span>
+            <h2 id="modalTitle">Agendar Cita de Servicio</h2>
+            
+            <form id="appointmentForm">
+                <input type="hidden" id="appointmentId">
+                
+                <div class="form-group">
+                    <label for="customer_id">Cliente:</label>
+                    <select id="customer_id" name="customer_id" class="form-control" required>
+                        <option value="">Seleccionar cliente</option>
+                    </select>
+                    <div class="error-message" id="customer_id-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="vehicle_id">Vehículo (opcional):</label>
+                    <select id="vehicle_id" name="vehicle_id" class="form-control">
+                        <option value="">Seleccionar vehículo</option>
+                    </select>
+                    <div class="error-message" id="vehicle_id-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="service_type">Tipo de Servicio:</label>
+                    <select id="service_type" name="service_type" class="form-control" required>
+                        <option value="">Seleccionar servicio</option>
+                        <option value="Mantenimiento Preventivo">Mantenimiento Preventivo</option>
+                        <option value="Cambio de Aceite">Cambio de Aceite</option>
+                        <option value="Revisión de Frenos">Revisión de Frenos</option>
+                        <option value="Alineación y Balanceo">Alineación y Balanceo</option>
+                        <option value="Diagnóstico Computarizado">Diagnóstico Computarizado</option>
+                        <option value="Cambio de Llantas">Cambio de Llantas</option>
+                        <option value="Revisión de Transmisión">Revisión de Transmisión</option>
+                        <option value="Servicio de A/C">Servicio de A/C</option>
+                        <option value="Inspección Pre-compra">Inspección Pre-compra</option>
+                        <option value="Reparación de Motor">Reparación de Motor</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                    <div class="error-message" id="service_type-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="appointment_date">Fecha y Hora:</label>
+                    <input type="datetime-local" id="appointment_date" name="appointment_date" class="form-control" required>
+                    <div class="error-message" id="appointment_date-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="status">Estado:</label>
+                    <select id="status" name="status" class="form-control" required>
+                        <option value="scheduled">Programada</option>
+                        <option value="confirmed">Confirmada</option>
+                        <option value="in_progress">En Progreso</option>
+                        <option value="completed">Completada</option>
+                        <option value="cancelled">Cancelada</option>
+                    </select>
+                    <div class="error-message" id="status-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notas adicionales:</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Detalles adicionales sobre el servicio..."></textarea>
+                    <div class="error-message" id="notes-error"></div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success">Guardar Cita</button>
+                    <button type="button" class="btn" onclick="closeAppointmentModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/validation.js"></script>
+    <script>
+        let appointments = [];
+        let customers = [];
+        let vehicles = [];
+        let editingAppointmentId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            
+            document.getElementById('appointmentForm').addEventListener('submit', handleAppointmentSubmit);
+            
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('appointment_date').min = now.toISOString().slice(0, 16);
+        });
+
+        async function loadData() {
+            try {
+                const [appointmentsRes, customersRes, vehiclesRes] = await Promise.all([
+                    fetch('/api/appointments'),
+                    fetch('/api/customers'),
+                    fetch('/api/vehicles')
+                ]);
+                
+                appointments = await appointmentsRes.json();
+                customers = await customersRes.json();
+                vehicles = await vehiclesRes.json();
+                
+                displayAppointments();
+                populateCustomerSelect();
+                populateVehicleSelect();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Error al cargar los datos');
+            }
+        }
+
+        function displayAppointments() {
+            const tbody = document.getElementById('appointmentsTableBody');
+            
+            if (appointments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2rem;">
+                            No hay citas programadas
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = appointments.map(appointment => `
+                <tr>
+                    <td><strong>${appointment.first_name} ${appointment.last_name}</strong></td>
+                    <td>${appointment.email}</td>
+                    <td>${appointment.phone}</td>
+                    <td>${appointment.model || '-'} ${appointment.vin ? `(${appointment.vin})` : ''}</td>
+                    <td>${appointment.service_type}</td>
+                    <td>${formatDate(appointment.appointment_date)}</td>
+                    <td><span class="status-${appointment.status}">${getAppointmentStatusText(appointment.status)}</span></td>
+                    <td>${appointment.notes || '-'}</td>
+                    <td>
+                        <button class="btn" onclick="editAppointment(${appointment.id})" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateCustomerSelect() {
+            const select = document.getElementById('customer_id');
+            select.innerHTML = '<option value="">Seleccionar cliente</option>';
+            
+            customers.forEach(customer => {
+                select.innerHTML += `<option value="${customer.id}">${customer.first_name} ${customer.last_name} (${customer.email})</option>`;
+            });
+        }
+
+        function populateVehicleSelect() {
+            const select = document.getElementById('vehicle_id');
+            select.innerHTML = '<option value="">Seleccionar vehículo</option>';
+            
+            vehicles.forEach(vehicle => {
+                select.innerHTML += `<option value="${vehicle.id}">${vehicle.model} ${vehicle.year} - ${vehicle.vin}</option>`;
+            });
+        }
+
+        function openAppointmentModal() {
+            editingAppointmentId = null;
+            document.getElementById('modalTitle').textContent = 'Agendar Cita de Servicio';
+            document.getElementById('appointmentForm').reset();
+            document.getElementById('appointmentId').value = '';
+            
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('appointment_date').min = now.toISOString().slice(0, 16);
+            document.getElementById('status').value = 'scheduled';
+            
+            clearErrors();
+            document.getElementById('appointmentModal').style.display = 'block';
+        }
+
+        function closeAppointmentModal() {
+            document.getElementById('appointmentModal').style.display = 'none';
+            clearErrors();
+        }
+
+        function editAppointment(id) {
+            const appointment = appointments.find(a => a.id === id);
+            if (!appointment) return;
+            
+            editingAppointmentId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Cita de Servicio';
+            document.getElementById('appointmentId').value = id;
+            
+            document.getElementById('customer_id').value = appointment.customer_id;
+            document.getElementById('vehicle_id').value = appointment.vehicle_id || '';
+            document.getElementById('service_type').value = appointment.service_type;
+            
+            const appointmentDate = new Date(appointment.appointment_date);
+            appointmentDate.setMinutes(appointmentDate.getMinutes() - appointmentDate.getTimezoneOffset());
+            document.getElementById('appointment_date').value = appointmentDate.toISOString().slice(0, 16);
+            
+            document.getElementById('status').value = appointment.status;
+            document.getElementById('notes').value = appointment.notes || '';
+            
+            clearErrors();
+            document.getElementById('appointmentModal').style.display = 'block';
+        }
+
+        async function handleAppointmentSubmit(e) {
+            e.preventDefault();
+            
+            if (!validateAppointmentForm()) return;
+            
+            const formData = new FormData(e.target);
+            const appointmentData = Object.fromEntries(formData.entries());
+            
+            if (!appointmentData.vehicle_id) {
+                delete appointmentData.vehicle_id;
+            }
+            
+            try {
+                const url = editingAppointmentId ? `/api/appointments/${editingAppointmentId}` : '/api/appointments';
+                const method = editingAppointmentId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(appointmentData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(result.message);
+                    closeAppointmentModal();
+                    loadData();
+                } else {
+                    showError(result.error || 'Error al guardar la cita');
+                }
+            } catch (error) {
+                console.error('Error saving appointment:', error);
+                showError('Error al guardar la cita');
+            }
+        }
+
+        function validateAppointmentForm() {
+            const customerId = document.getElementById('customer_id').value;
+            const serviceType = document.getElementById('service_type').value.trim();
+            const appointmentDate = document.getElementById('appointment_date').value;
+            
+            let isValid = true;
+            clearErrors();
+            
+            if (!customerId) {
+                showFieldError('customer_id', 'Debe seleccionar un cliente');
+                isValid = false;
+            }
+            
+            if (!serviceType) {
+                showFieldError('service_type', 'Debe seleccionar un tipo de servicio');
+                isValid = false;
+            }
+            
+            if (!appointmentDate) {
+                showFieldError('appointment_date', 'Debe seleccionar fecha y hora');
+                isValid = false;
+            } else {
+                const selectedDate = new Date(appointmentDate);
+                const now = new Date();
+                
+                if (selectedDate < now && !editingAppointmentId) {
+                    showFieldError('appointment_date', 'La fecha no puede ser anterior a la actual');
+                    isValid = false;
+                }
+            }
+            
+            return isValid;
+        }
+
+        function getAppointmentStatusText(status) {
+            const statusMap = {
+                'scheduled': 'Programada',
+                'confirmed': 'Confirmada',
+                'in_progress': 'En Progreso',
+                'completed': 'Completada',
+                'cancelled': 'Cancelada'
+            };
+            return statusMap[status] || status;
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('appointmentModal');
+            if (event.target === modal) {
+                closeAppointmentModal();
+            }
+        }
+    </script>
+</body>
+</html>

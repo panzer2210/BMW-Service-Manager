@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - BMW Service Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <h2 class="login-title">🚗 Registro BMW</h2>
+            
+            <div id="alerts"></div>
+            
+            <form id="registerForm" action="/register" method="POST">
+                <div class="form-group">
+                    <label for="username">Usuario:</label>
+                    <input type="text" id="username" name="username" class="form-control" required>
+                    <div class="error-message" id="username-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                    <div class="error-message" id="email-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                    <div class="error-message" id="password-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Contraseña:</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
+                    <div class="error-message" id="confirmPassword-error"></div>
+                </div>
+                
+                <button type="submit" class="btn" style="width: 100%;">Registrarse</button>
+            </form>
+            
+            <div class="form-footer">
+                <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/validation.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            showFlashMessages();
+            
+            const registerForm = document.getElementById('registerForm');
+            registerForm.addEventListener('submit', function(e) {
+                if (!validateRegisterForm()) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        function validateRegisterForm() {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            let isValid = true;
+            
+            clearErrors();
+            
+            if (!username) {
+                showFieldError('username', 'El usuario es requerido');
+                isValid = false;
+            } else if (username.length < 3) {
+                showFieldError('username', 'El usuario debe tener al menos 3 caracteres');
+                isValid = false;
+            } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                showFieldError('username', 'El usuario solo puede contener letras, números y guiones bajos');
+                isValid = false;
+            }
+            
+            if (!email) {
+                showFieldError('email', 'El email es requerido');
+                isValid = false;
+            } else if (!isValidEmail(email)) {
+                showFieldError('email', 'El formato del email no es válido');
+                isValid = false;
+            }
+            
+            if (!password) {
+                showFieldError('password', 'La contraseña es requerida');
+                isValid = false;
+            } else if (password.length < 6) {
+                showFieldError('password', 'La contraseña debe tener al menos 6 caracteres');
+                isValid = false;
+            } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+                showFieldError('password', 'La contraseña debe contener al menos una minúscula, una mayúscula y un número');
+                isValid = false;
+            }
+            
+            if (!confirmPassword) {
+                showFieldError('confirmPassword', 'Confirma tu contraseña');
+                isValid = false;
+            } else if (password !== confirmPassword) {
+                showFieldError('confirmPassword', 'Las contraseñas no coinciden');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+    </script>
+</body>
+</html>
