@@ -84,6 +84,7 @@
                     <label for="service_type">Tipo de Servicio:</label>
                     <select id="service_type" name="service_type" class="form-control" required>
                         <option value="">Seleccionar servicio</option>
+                        <option value="Venta">Venta de Vehículo</option>
                         <option value="Mantenimiento Preventivo">Mantenimiento Preventivo</option>
                         <option value="Cambio de Aceite">Cambio de Aceite</option>
                         <option value="Revisión de Frenos">Revisión de Frenos</option>
@@ -195,7 +196,8 @@
                     <td><span class="status-${appointment.status}">${getAppointmentStatusText(appointment.status)}</span></td>
                     <td>${appointment.notes || '-'}</td>
                     <td>
-                        <button class="btn" onclick="editAppointment(${appointment.id})" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️</button>
+                        <button class="btn btn-warning" onclick="editAppointment(${appointment.id})" style="margin-right: 0.5rem; padding: 0.4rem 0.8rem; font-size: 12px;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteAppointment(${appointment.id})" style="padding: 0.4rem 0.8rem; font-size: 12px;">🗑️</button>
                     </td>
                 </tr>
             `).join('');
@@ -292,6 +294,32 @@
                     showSuccess(result.message);
                     closeAppointmentModal();
                     loadData();
+                    
+                    // If this was a sale completion, save to localStorage for dashboard to detect
+                    if (result.statusChanged && result.newStatus === 'completed' && 
+                        (result.serviceType === 'Venta' || result.vehicleId)) {
+                        console.log('Sale completed, updating localStorage trigger');
+                        
+                        // Create unique timestamp to force detection
+                        const saleTimestamp = Date.now() + Math.random();
+                        localStorage.setItem('bmw-sale-completed', JSON.stringify({
+                            timestamp: saleTimestamp,
+                            appointmentId: result.id,
+                            vehicleId: result.vehicleId,
+                            serviceType: result.serviceType,
+                            triggerUpdate: true
+                        }));
+                        
+                        // Clear any previous check timestamps to force immediate update
+                        localStorage.removeItem('bmw-last-sale-check');
+                        localStorage.removeItem('bmw-dashboard-last-check');
+                        localStorage.removeItem('bmw-vehicles-last-check');
+                        
+                        // Show sale confirmation
+                        setTimeout(() => {
+                            alert('¡Venta completada! Ve al Dashboard para ver las estadísticas actualizadas.');
+                        }, 1000);
+                    }
                 } else {
                     showError(result.error || 'Error al guardar la cita');
                 }
@@ -344,6 +372,35 @@
                 'cancelled': 'Cancelada'
             };
             return statusMap[status] || status;
+        }
+
+        async function deleteAppointment(id) {
+            const appointment = appointments.find(a => a.id === id);
+            if (!appointment) return;
+            
+            const customerName = `${appointment.first_name} ${appointment.last_name}`;
+            
+            if (!confirm(`¿Está seguro de que desea eliminar la cita de ${customerName}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/appointments/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess('Cita eliminada exitosamente');
+                    loadData();
+                } else {
+                    showError(result.error || 'Error al eliminar la cita');
+                }
+            } catch (error) {
+                console.error('Error deleting appointment:', error);
+                showError('Error al eliminar la cita');
+            }
         }
 
         window.onclick = function(event) {

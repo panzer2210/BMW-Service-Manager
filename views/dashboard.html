@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - BMW Service Manager</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/dashboard-advanced.js"></script>
+    <script src="/js/finance-calculator.js"></script>
+    <script src="/js/vehicle-gallery.js"></script>
 </head>
 <body>
     <header class="header">
@@ -32,10 +36,6 @@
                 <div class="stat-label">Vehículos Totales</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="availableVehicles">-</div>
-                <div class="stat-label">Vehículos Disponibles</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-number" id="totalCustomers">-</div>
                 <div class="stat-label">Clientes Registrados</div>
             </div>
@@ -43,14 +43,67 @@
                 <div class="stat-number" id="totalAppointments">-</div>
                 <div class="stat-label">Citas Totales</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="upcomingAppointments">-</div>
-                <div class="stat-label">Próximas Citas</div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="card">
+            <h2>📊 Análisis y Tendencias</h2>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Ventas por Mes</h3>
+                    <canvas id="salesChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Vehículos por Tipo</h3>
+                    <canvas id="vehicleTypeChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2>⚡ Acciones Rápidas</h2>
+            <div class="quick-actions">
+                <button class="action-btn" onclick="openQuickVehicleAdd()">
+                    🚗 Agregar Vehículo
+                </button>
+                <button class="action-btn" onclick="openQuickCustomerAdd()">
+                    👥 Nuevo Cliente
+                </button>
+                <button class="action-btn" onclick="generateReport()">
+                    📊 Generar Reporte
+                </button>
+                <button class="action-btn" onclick="openCalculator()">
+                    💰 Calculadora
+                </button>
+                <button class="action-btn" onclick="viewNotifications()">
+                    🔔 Notificaciones
+                    <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+                </button>
+                <button class="action-btn" onclick="refreshDashboard()">
+                    🔄 Actualizar Dashboard
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <h2>📋 Actividad Reciente</h2>
+            <div id="recentActivity" class="activity-feed">
+                <div class="activity-item">
+                    <div class="activity-icon">🚗</div>
+                    <div class="activity-content">
+                        <strong>Nuevo vehículo agregado</strong>
+                        <p>BMW X5 2024 - Alpine White</p>
+                        <span class="activity-time">Hace 2 horas</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="card">
-            <h2>Funciones Principales</h2>
+            <h2>🎯 Funciones Principales</h2>
             <div class="features">
                 <div class="feature">
                     <div class="feature-icon">🚙</div>
@@ -77,22 +130,91 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardStats();
+            
+            // Check for updates every 3 seconds (simple and reliable)
+            setInterval(() => {
+                loadDashboardStats();
+            }, 3000);
+            
+            // Also check on window focus to catch changes when switching tabs
+            window.addEventListener('focus', () => {
+                setTimeout(() => {
+                    loadDashboardStats();
+                }, 500);
+            });
         });
 
-        async function loadDashboardStats() {
+
+        function checkForNewSales() {
+            const saleData = localStorage.getItem('bmw-sale-completed');
+            if (saleData) {
+                const sale = JSON.parse(saleData);
+                const lastCheck = localStorage.getItem('bmw-dashboard-last-check') || '0';
+                
+                // If this is a new sale (timestamp is newer than last check) or forced update
+                if (sale.timestamp > parseInt(lastCheck) || sale.triggerUpdate) {
+                    console.log('New sale detected in main dashboard, forcing complete update');
+                    
+                    // Add delay to ensure server has processed the sale
+                    setTimeout(async () => {
+                        console.log('Updating dashboard stats and revenue history...');
+                        await loadDashboardStats();
+                        await loadMonthlyRevenueHistory();
+                        console.log('Dashboard update completed');
+                    }, 2000);
+                    
+                    // Mark this sale as processed
+                    localStorage.setItem('bmw-dashboard-last-check', sale.timestamp.toString());
+                    
+                    // Remove trigger flag
+                    if (sale.triggerUpdate) {
+                        delete sale.triggerUpdate;
+                        localStorage.setItem('bmw-sale-completed', JSON.stringify(sale));
+                    }
+                }
+            }
+        }
+
+        // Make function global so it can be called from other scripts
+        window.loadDashboardStats = async function() {
             try {
+                console.log('Loading dashboard stats...');
                 const response = await fetch('/api/dashboard-stats');
                 const stats = await response.json();
                 
+                console.log('Stats received:', stats);
+                
                 document.getElementById('totalVehicles').textContent = stats.totalVehicles || 0;
-                document.getElementById('availableVehicles').textContent = stats.availableVehicles || 0;
                 document.getElementById('totalCustomers').textContent = stats.totalCustomers || 0;
                 document.getElementById('totalAppointments').textContent = stats.totalAppointments || 0;
-                document.getElementById('upcomingAppointments').textContent = stats.upcomingAppointments || 0;
+                
+                console.log('Dashboard stats updated successfully');
                 
             } catch (error) {
                 console.error('Error loading dashboard stats:', error);
             }
+        }
+
+        // Create alias for backwards compatibility
+        async function loadDashboardStats() {
+            return await window.loadDashboardStats();
+        }
+
+
+
+        async function refreshDashboard() {
+            // Clear localStorage triggers to force fresh data
+            localStorage.removeItem('bmw-sale-completed');
+            localStorage.removeItem('bmw-last-sale-check');
+            localStorage.removeItem('bmw-dashboard-last-check');
+            
+            await loadDashboardStats();
+            if (window.bmwDashboard) {
+                await window.bmwDashboard.loadDashboardStats();
+                await window.bmwDashboard.createCharts();
+                window.bmwDashboard.loadRecentActivity();
+            }
+            alert('¡Dashboard actualizado exitosamente!');
         }
     </script>
 </body>

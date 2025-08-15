@@ -15,7 +15,7 @@
             
             <form id="loginForm" action="/login" method="POST">
                 <div class="form-group">
-                    <label for="username">Usuario o Email:</label>
+                    <label for="username">Usuario:</label>
                     <input type="text" id="username" name="username" class="form-control" required>
                     <div class="error-message" id="username-error"></div>
                 </div>
@@ -59,10 +59,7 @@
             clearErrors();
             
             if (!username) {
-                showFieldError('username', 'El usuario o email es requerido');
-                isValid = false;
-            } else if (username.includes('@') && !isValidEmail(username)) {
-                showFieldError('username', 'El formato del email no es válido');
+                showFieldError('username', 'El usuario es requerido');
                 isValid = false;
             }
             

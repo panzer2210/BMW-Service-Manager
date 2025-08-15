@@ -83,8 +83,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="phone">Teléfono:</label>
-                    <input type="tel" id="phone" name="phone" class="form-control" required>
+                    <label for="phone">Teléfono (8 dígitos):</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" 
+                           maxlength="8" minlength="8" pattern="[0-9]{8}" 
+                           placeholder="12345678" title="Debe contener exactamente 8 números" required>
                     <div class="error-message" id="phone-error"></div>
                 </div>
                 
@@ -111,16 +113,45 @@
             loadCustomers();
             
             document.getElementById('customerForm').addEventListener('submit', handleCustomerSubmit);
+            
+            // Add phone number validation
+            const phoneInput = document.getElementById('phone');
+            phoneInput.addEventListener('input', function(e) {
+                // Remove any non-numeric characters
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                // Limit to 8 characters
+                if (e.target.value.length > 8) {
+                    e.target.value = e.target.value.slice(0, 8);
+                }
+            });
+            
+            phoneInput.addEventListener('paste', function(e) {
+                // Handle paste events
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const numericOnly = pastedText.replace(/[^0-9]/g, '').slice(0, 8);
+                e.target.value = numericOnly;
+            });
         });
 
         async function loadCustomers() {
             try {
                 const response = await fetch('/api/customers');
+                
+                if (!response.ok) {
+                    if (response.status === 302 || response.redirected) {
+                        // Session expired, redirect to login
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 customers = await response.json();
                 displayCustomers();
             } catch (error) {
                 console.error('Error loading customers:', error);
-                showError('Error al cargar los clientes');
+                showError('Error al cargar los clientes - Database error');
             }
         }
 
@@ -147,7 +178,8 @@
                     <td>${customer.address || '-'}</td>
                     <td>${formatDate(customer.created_at)}</td>
                     <td>
-                        <button class="btn" onclick="editCustomer(${customer.id})" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️</button>
+                        <button class="btn btn-warning" onclick="editCustomer(${customer.id})" style="margin-right: 0.5rem; padding: 0.4rem 0.8rem; font-size: 12px;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteCustomer(${customer.id})" style="padding: 0.4rem 0.8rem; font-size: 12px;">🗑️</button>
                     </td>
                 </tr>
             `).join('');
@@ -256,12 +288,44 @@
             if (!phone) {
                 showFieldError('phone', 'El teléfono es requerido');
                 isValid = false;
-            } else if (!isValidPhone(phone)) {
-                showFieldError('phone', 'El formato del teléfono no es válido');
+            } else if (phone.length !== 8) {
+                showFieldError('phone', 'El teléfono debe tener exactamente 8 dígitos');
+                isValid = false;
+            } else if (!/^[0-9]{8}$/.test(phone)) {
+                showFieldError('phone', 'El teléfono solo debe contener números');
                 isValid = false;
             }
             
             return isValid;
+        }
+
+        async function deleteCustomer(id) {
+            const customer = customers.find(c => c.id === id);
+            if (!customer) return;
+            
+            const customerName = `${customer.first_name} ${customer.last_name}`;
+            
+            if (!confirm(`¿Está seguro de que desea eliminar al cliente ${customerName}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/customers/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess('Cliente eliminado exitosamente');
+                    loadCustomers();
+                } else {
+                    showError(result.error || 'Error al eliminar el cliente');
+                }
+            } catch (error) {
+                console.error('Error deleting customer:', error);
+                showError('Error al eliminar el cliente');
+            }
         }
 
         window.onclick = function(event) {

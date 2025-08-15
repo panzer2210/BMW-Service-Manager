@@ -70,20 +70,20 @@
                         <label for="model">Modelo BMW:</label>
                         <select id="model" name="model" class="form-control" required>
                             <option value="">Seleccionar modelo</option>
-                            <option value="BMW 118i">BMW 118i</option>
-                            <option value="BMW 320i">BMW 320i</option>
-                            <option value="BMW 330i">BMW 330i</option>
-                            <option value="BMW 420i">BMW 420i</option>
-                            <option value="BMW 520i">BMW 520i</option>
-                            <option value="BMW X1">BMW X1</option>
-                            <option value="BMW X3">BMW X3</option>
-                            <option value="BMW X5">BMW X5</option>
-                            <option value="BMW X7">BMW X7</option>
-                            <option value="BMW Z4">BMW Z4</option>
-                            <option value="BMW i3">BMW i3</option>
-                            <option value="BMW iX3">BMW iX3</option>
-                            <option value="BMW M3">BMW M3</option>
-                            <option value="BMW M5">BMW M5</option>
+                            <option value="BMW 118i (Hatchback)">BMW 118i (Hatchback)</option>
+                            <option value="BMW 320i (Sedán)">BMW 320i (Sedán)</option>
+                            <option value="BMW 330i (Sedán)">BMW 330i (Sedán)</option>
+                            <option value="BMW 420i (Coupé)">BMW 420i (Coupé)</option>
+                            <option value="BMW 520i (Sedán)">BMW 520i (Sedán)</option>
+                            <option value="BMW X1 (SUV)">BMW X1 (SUV)</option>
+                            <option value="BMW X3 (SUV)">BMW X3 (SUV)</option>
+                            <option value="BMW X5 (SUV)">BMW X5 (SUV)</option>
+                            <option value="BMW X7 (SUV)">BMW X7 (SUV)</option>
+                            <option value="BMW Z4 (Roadster)">BMW Z4 (Roadster)</option>
+                            <option value="BMW i3 (Eléctrico)">BMW i3 (Eléctrico)</option>
+                            <option value="BMW iX3 (SUV Eléctrico)">BMW iX3 (SUV Eléctrico)</option>
+                            <option value="BMW M3 (Deportivo)">BMW M3 (Deportivo)</option>
+                            <option value="BMW M5 (Deportivo)">BMW M5 (Deportivo)</option>
                         </select>
                         <div class="error-message" id="model-error"></div>
                     </div>
@@ -98,8 +98,11 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="vin">VIN (17 caracteres):</label>
-                        <input type="text" id="vin" name="vin" class="form-control" maxlength="17" required>
-                        <div class="error-message" id="vin-error"></div>
+                        <input type="text" id="vin" name="vin" class="form-control" maxlength="17" required placeholder="Ej: WBAXXX12345678901">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="error-message" id="vin-error"></div>
+                            <small id="vin-counter" style="color: #6c757d; font-size: 0.8rem;">0/17 caracteres</small>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -186,8 +189,38 @@
             document.getElementById('vehicleForm').addEventListener('submit', handleVehicleSubmit);
             document.getElementById('vin').addEventListener('input', function(e) {
                 e.target.value = e.target.value.replace(/[^A-HJ-NPR-Z0-9]/gi, '').toUpperCase();
+                
+                // Update character counter
+                const currentLength = e.target.value.length;
+                const counter = document.getElementById('vin-counter');
+                if (counter) {
+                    counter.textContent = `${currentLength}/17 caracteres`;
+                    counter.style.color = currentLength === 17 ? '#28a745' : '#6c757d';
+                }
+            });
+            
+            // Check for sales and refresh vehicle list every 3 seconds
+            setInterval(checkForSalesAndRefresh, 3000);
+            
+            // Also refresh when window gets focus
+            window.addEventListener('focus', () => {
+                setTimeout(loadVehicles, 500);
             });
         });
+
+        function checkForSalesAndRefresh() {
+            const saleData = localStorage.getItem('bmw-sale-completed');
+            if (saleData) {
+                const sale = JSON.parse(saleData);
+                const lastCheck = localStorage.getItem('bmw-vehicles-last-check') || '0';
+                
+                if (sale.timestamp > parseInt(lastCheck)) {
+                    console.log('Sale detected, refreshing vehicle list');
+                    loadVehicles();
+                    localStorage.setItem('bmw-vehicles-last-check', sale.timestamp.toString());
+                }
+            }
+        }
 
         async function loadVehicles() {
             try {
@@ -203,18 +236,21 @@
         function displayVehicles() {
             const tbody = document.getElementById('vehiclesTableBody');
             
-            if (vehicles.length === 0) {
+            // Filter out sold vehicles - only show available, reserved, and maintenance
+            const availableVehicles = vehicles.filter(vehicle => vehicle.status !== 'sold');
+            
+            if (availableVehicles.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="10" style="text-align: center; padding: 2rem;">
-                            No hay vehículos registrados
+                            No hay vehículos disponibles
                         </td>
                     </tr>
                 `;
                 return;
             }
             
-            tbody.innerHTML = vehicles.map(vehicle => `
+            tbody.innerHTML = availableVehicles.map(vehicle => `
                 <tr>
                     <td><strong>${vehicle.model}</strong></td>
                     <td>${vehicle.year}</td>
@@ -239,6 +275,14 @@
             document.getElementById('vehicleForm').reset();
             document.getElementById('vehicleId').value = '';
             clearErrors();
+            
+            // Reset VIN counter
+            const counter = document.getElementById('vin-counter');
+            if (counter) {
+                counter.textContent = '0/17 caracteres';
+                counter.style.color = '#6c757d';
+            }
+            
             document.getElementById('vehicleModal').style.display = 'block';
         }
 
