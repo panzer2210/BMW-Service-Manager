@@ -35,11 +35,14 @@ app.use((req, res, next) => {
     next();
 });
 
-const db = new sqlite3.Database('./bmw_service.db', (err) => {
+// Database path - use /app/data for Docker volume persistence
+const dbPath = process.env.NODE_ENV === 'production' ? '/app/data/bmw_service.db' : './bmw_service.db';
+
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
     } else {
-        console.log('Connected to SQLite database');
+        console.log(`Connected to SQLite database at: ${dbPath}`);
         initializeDatabase();
     }
 });
